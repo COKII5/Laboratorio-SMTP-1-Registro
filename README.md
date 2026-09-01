@@ -30,11 +30,34 @@ SimpleEmailSender (código SMTP entregado, adaptado a parámetros)
   parámetro y leer la clave de aplicación desde un archivo local
   (`email_config.json`, fuera del repo).
 - `Assets/Scripts/RegistrationEmailNotifier.cs` — se suscribe a los
-  eventos del formulario y decide asunto/cuerpo según éxito o fallo.
-- `Assets/Scripts/RegistrationUIBootstrapper.cs` — arma la UI mínima
-  (campos, botón, textos de estado) por código al iniciar la escena, para
-  que el proyecto funcione directamente al reproducir sin pasos manuales
-  extra en el editor.
+  eventos del formulario y decide asunto/cuerpo según éxito o fallo. El
+  correo de notificación se envía al mismo correo escrito en el
+  formulario.
+
+La UI **se diseña manualmente en el Editor de Unity** (Canvas, campos de
+nombre/correo, botón, textos de estado). Los scripts no crean ninguna UI
+por código — solo se les arrastran las referencias existentes.
+
+## Conexión manual en el Editor (una sola vez)
+
+1. Crear un GameObject vacío, ej. `RegistrationLogic`, y agregarle los
+   componentes `RegistrationForm`, `SimpleEmailSender` y
+   `RegistrationEmailNotifier`.
+2. En `RegistrationForm` (Inspector):
+   - `Name Input` → tu campo de nombre (TMP_InputField).
+   - `Email Input` → tu campo de correo (TMP_InputField).
+   - `Submit Button` → tu botón de enviar.
+   - `Validation Status Text` → un `TMP_Text` de tu UI para mostrar el
+     resultado de la validación.
+3. En `RegistrationEmailNotifier` (Inspector):
+   - `Form` → el mismo `RegistrationForm` del paso 2.
+   - `Email Sender` → el `SimpleEmailSender` del mismo GameObject.
+   - `Send Result Text` (opcional) → otro `TMP_Text` para el resultado del
+     envío SMTP (éxito/error).
+
+No hace falta enganchar nada más al `OnClick()` del botón desde el
+Inspector: `RegistrationForm` ya se suscribe a su propio botón en
+`Awake()`.
 
 ## Manejo de error específico de la opción
 
@@ -53,9 +76,20 @@ inválido`), tomado directamente de la causa detectada en
 2. Ese archivo está en `.gitignore` — nunca se sube al repositorio ni a
    su historial.
 
+## Si no llega el correo — cómo diagnosticar
+
+`SimpleEmailSender.SendEmail` nunca falla en silencio: siempre devuelve
+`resultMessage` con el texto exacto de éxito o del `Exception.Message`.
+Revisa ese texto en el `Send Result Text` de tu UI (o en la consola de
+Unity, se loguea igual). Las causas más comunes:
+- `email_config.json` no existe o tiene la clave equivocada.
+- La clave de aplicación de Gmail fue revocada/expiró — hay que generar
+  una nueva.
+- Firewall/red bloqueando el puerto 587 saliente.
+
 ## Ejecución
 
-Abrir el proyecto en Unity 6, abrir `Assets/Scenes/SampleScene.unity` y
-dar Play. La UI se genera automáticamente. Escribir nombre + correo +
-correo destino, y presionar "Registrar" para ver la validación y el envío
-real de correo.
+Abrir el proyecto en Unity 6, abrir `Assets/Scenes/SampleScene.unity`,
+verificar las referencias del paso "Conexión manual" y dar Play. Escribir
+nombre + correo y presionar el botón de registro para ver la validación y
+el envío real de correo.

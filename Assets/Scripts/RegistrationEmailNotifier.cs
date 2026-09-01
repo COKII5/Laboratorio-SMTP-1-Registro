@@ -6,13 +6,15 @@ using TMPro;
 /// RegistrationForm como SimpleEmailSender. El formulario nunca llama
 /// directamente al envío de correo: este notifier se suscribe a sus
 /// eventos (OnRegistrationSuccess / OnRegistrationFailed) y decide qué
-/// asunto/cuerpo construir y cuándo enviar.
+/// asunto/cuerpo construir y cuándo enviar. El correo notificado llega
+/// al mismo correo que la persona escribió en el formulario (InputCorreo).
 /// </summary>
 public class RegistrationEmailNotifier : MonoBehaviour
 {
     public RegistrationForm form;
     public SimpleEmailSender emailSender;
-    public TMP_InputField destinationEmailInput;
+
+    [Tooltip("Opcional: un TMP_Text de tu UI donde mostrar el resultado del envío SMTP. Puede quedar vacío.")]
     public TMP_Text sendResultText;
 
     private void OnEnable()
@@ -29,11 +31,6 @@ public class RegistrationEmailNotifier : MonoBehaviour
         form.OnRegistrationFailed -= HandleFailed;
     }
 
-    private string DestinationEmail =>
-        destinationEmailInput != null && !string.IsNullOrEmpty(destinationEmailInput.text)
-            ? destinationEmailInput.text.Trim()
-            : "mailto@example.com";
-
     private void HandleSuccess(string name, string email)
     {
         string subject = "Registro completado";
@@ -42,7 +39,7 @@ public class RegistrationEmailNotifier : MonoBehaviour
             $"Nombre: {name}\n" +
             $"Correo ingresado: {email}\n";
 
-        Send(subject, body);
+        Send(email, subject, body);
     }
 
     private void HandleFailed(string name, string email, string reason)
@@ -54,12 +51,15 @@ public class RegistrationEmailNotifier : MonoBehaviour
             $"Correo ingresado: {email}\n" +
             $"Motivo de la validación que falló: {reason}\n";
 
-        Send(subject, body);
+        // Si el correo llegó vacío o inválido no hay a dónde enviar la
+        // notificación de fallo; se deja constancia en consola/UI.
+        string destination = string.IsNullOrEmpty(email) ? "mailto@example.com" : email;
+        Send(destination, subject, body);
     }
 
-    private void Send(string subject, string body)
+    private void Send(string toEmail, string subject, string body)
     {
-        bool ok = emailSender.SendEmail(DestinationEmail, subject, body, out string resultMessage);
+        bool ok = emailSender.SendEmail(toEmail, subject, body, out string resultMessage);
         if (sendResultText != null)
         {
             sendResultText.text = ok
